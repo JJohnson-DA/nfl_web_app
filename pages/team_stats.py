@@ -174,6 +174,7 @@ def app():
                     .groupby(["week", "play_type"])
                     .sum()
                     .reset_index(),
+                    title="Yards/Game by Play Type",
                     x="week",
                     y="yards_gained",
                     color="play_type",
@@ -212,7 +213,7 @@ def app():
         # ==== Offensive Stats =====================================================
         with st.expander("Offense"):
             with st.container():  # ---- Passing ----
-                st.subheader(f"Passing Stats - {years[0]}")
+                st.subheader("Passing Stats")
                 # get passing stats from function
                 (
                     pass_attempts,
@@ -264,12 +265,61 @@ def app():
                         delta=f"{interceptions - league_interceptions} vs NFL",
                         delta_color="inverse",
                     )
+                st.write("")
                 st.write("---")
 
             with st.container():  # ---- Receiving ----
                 st.subheader("Receiving Stats")
                 # Receptions, yards, yards/rec, TD, avg rec length (dist), dist by down
+                (
+                    receptions,
+                    avg_rec_yds,
+                    avg_pass_length,
+                    yds_after_catch,
+                    rec_td,
+                ) = funcs.team_rec_stats(team_data, team_dict, selected_team)
+                (
+                    league_receptions,
+                    league_rec_yards,
+                    league_pass_length,
+                    league_yds_after_catch,
+                    league_rec_td,
+                ) = funcs.league_avg_rec_stats(data)
 
+                # Create KPI layout
+                kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+                # Fill KPI containers
+                with kpi1:  # Receptions
+                    st.metric(
+                        label="Receptions",
+                        value=receptions,
+                        delta=f"{receptions - league_receptions} vs NFL",
+                    )
+                with kpi2:  # Avg Rec Yds
+                    st.metric(
+                        label="Yds/Pass",
+                        value=avg_rec_yds,
+                        delta=f"{round(avg_rec_yds - league_rec_yards, 1)} vs NFL",
+                    )
+                with kpi3:  # Avg Pass Length
+                    st.metric(
+                        label="Pass Distance",
+                        value=avg_pass_length,
+                        delta=f"{round(avg_pass_length - league_pass_length, 1)} vs NFL",
+                    )
+                with kpi4:  # Avg Rec Length
+                    st.metric(
+                        label="Yds After Catch",
+                        value=yds_after_catch,
+                        delta=f"{yds_after_catch -  league_yds_after_catch} vs NFL",
+                    )
+                with kpi5:  # Rec TD
+                    st.metric(
+                        label="Rec TD",
+                        value=rec_td,
+                        delta=f"{rec_td - league_rec_td} vs NFL",
+                    )
+                st.write("")
                 st.write("---")
 
             with st.container():  # ---- Rushing ----
@@ -319,3 +369,6 @@ def app():
         # fig.update_yaxes(showgrid=False, rangemode="tozero")
 
         # st.plotly_chart(fig, use_container_width=True)
+
+
+# %%

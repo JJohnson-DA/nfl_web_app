@@ -4,14 +4,21 @@ import funcs
 
 def app():
     with st.container():
-        st.title("NFL Data Exploration App")
-        st.write(
-            """
-            Thanks for exploration our page! We hope you find some cool insights while you\'re here. 
-            
-            Use the filters in the sidebar to navigate between pages and choose filters.
-            """
-        )
+        title, logo = st.columns([3, 1])
+        with title:
+            st.title("NFL Data Exploration App")
+            st.write(
+                """
+                Thanks for exploration our page! We hope you find some cool insights while you\'re here. 
+                
+                Use the filters in the sidebar to navigate between pages and choose filters.
+                """
+            )
+        with logo:
+            st.image(
+                "https://raw.githubusercontent.com/nflverse/nflfastR-data/master/NFL.png",
+                width=150,
+            )
         st.write("---")
     # with st.container():
     #     st.write(

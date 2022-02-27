@@ -222,3 +222,55 @@ def league_avg_pass_stats(raw):
         league_interceptions,
     )
 
+
+def team_rec_stats(team_data, team_dict, selected_team):
+    """
+    Returns team receptions, avg pass length, yds/rec, and rec td
+    """
+    # Data Adjustments
+    data = team_data[team_data.posteam == team_dict[selected_team]]
+    data["pass_length"] = data.yards_gained - data.yards_after_catch
+    # Metrics
+    receptions = round(data.complete_pass.sum())
+    avg_rec_yds = round(data[data.complete_pass == 1].yards_gained.mean())
+    avg_pass_length = round(data[data.complete_pass == 1].pass_length.mean())
+    yds_after_catch = round(data[data.complete_pass == 1].yards_after_catch.mean())
+    rec_td = round(data[data.complete_pass == 1].touchdown.sum())
+
+    return receptions, avg_rec_yds, avg_pass_length, yds_after_catch, rec_td
+
+
+def league_avg_rec_stats(raw):
+    """
+    Returns league receptions, avg pass length, yds/rec, and rec td
+    """
+    # Data Adjustments
+    data = raw.copy()
+    data["pass_length"] = data.yards_gained - data.yards_after_catch
+    # Metrics
+    league_receptions = round(
+        data.groupby("posteam")["complete_pass"]
+        .sum()
+        .reset_index()
+        .complete_pass.mean()
+    )
+    league_pass_length = round(data[data.play_type == "pass"].pass_length.mean())
+    league_rec_yards = round(data[data.complete_pass == 1].yards_gained.mean())
+    league_yds_after_catch = round(
+        data[data.complete_pass == 1].yards_after_catch.mean()
+    )
+    league_rec_td = round(
+        data[data.complete_pass == 1]
+        .groupby("posteam")["touchdown"]
+        .sum()
+        .reset_index()
+        .touchdown.mean()
+    )
+    return (
+        league_receptions,
+        league_rec_yards,
+        league_pass_length,
+        league_yds_after_catch,
+        league_rec_td,
+    )
+
