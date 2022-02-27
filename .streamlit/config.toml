@@ -1,0 +1,8 @@
+[theme]
+base="dark"
+primaryColor="#377af7"
+backgroundColor="#303235"
+secondaryBackgroundColor="#222225"
+
+[ui]
+hideTopBar = true

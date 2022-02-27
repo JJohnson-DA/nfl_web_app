@@ -1,0 +1,5 @@
+# Ignore miscellaneous data folder
+data_misc/*
+
+# Pycache folders
+__pycache__
