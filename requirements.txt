@@ -1,1 +1,2 @@
 nfl-data-py==0.2.5
+plotly==5.6.0
