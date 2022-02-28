@@ -17,7 +17,7 @@ def app():
         with logo:
             st.image(
                 "https://raw.githubusercontent.com/nflverse/nflfastR-data/master/NFL.png",
-                width=150,
+                width=125,
             )
         st.write("---")
     # with st.container():

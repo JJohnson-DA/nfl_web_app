@@ -307,11 +307,11 @@ def app():
                         value=avg_pass_length,
                         delta=f"{round(avg_pass_length - league_pass_length, 1)} vs NFL",
                     )
-                with kpi4:  # Avg Rec Length
+                with kpi4:  # Yds After Catch
                     st.metric(
                         label="Yds After Catch",
                         value=yds_after_catch,
-                        delta=f"{yds_after_catch -  league_yds_after_catch} vs NFL",
+                        delta=f"{round(yds_after_catch -  league_yds_after_catch,1)} vs NFL",
                     )
                 with kpi5:  # Rec TD
                     st.metric(
@@ -324,7 +324,43 @@ def app():
 
             with st.container():  # ---- Rushing ----
                 st.subheader("Rushing Stats")
-                # rushes, Yds, TD, avg run length (dist), dist by down
+                # rushes, Yds, TD, avg run length (dist)
+                rushes, avg_rush_length, rush_yards, rush_td = funcs.team_rush_stats(
+                    team_data, team_dict, selected_team
+                )
+                (
+                    league_rushes,
+                    league_rush_length,
+                    league_rush_yards,
+                    league_rush_td,
+                ) = funcs.league_avg_rush_stats(data)
+                # Create KPI layout
+                kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+                # Fill KPI containers
+                with kpi1:  # Rushes
+                    st.metric(
+                        label="Rushes",
+                        value=rushes,
+                        delta=f"{rushes - league_rushes} vs NFL",
+                    )
+                with kpi2:  # Rush Length
+                    st.metric(
+                        label="Avg Rush",
+                        value=avg_rush_length,
+                        delta=f"{round(avg_rush_length - league_rush_length, 1)} vs NFL",
+                    )
+                with kpi3:  # Total Rush Yards
+                    st.metric(
+                        label="Total Rushing",
+                        value=rush_yards,
+                        delta=f"{round(rush_yards - league_rush_yards, 1)} vs NFL",
+                    )
+                with kpi4:  # Rushing TD
+                    st.metric(
+                        label="Rushing TD",
+                        value=rush_td,
+                        delta=f"{round(rush_td -  league_rush_td,1)} vs NFL",
+                    )
 
         # ==== Defensive Stats =====================================================
         with st.expander("Defense"):
