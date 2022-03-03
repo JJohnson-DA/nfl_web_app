@@ -75,35 +75,12 @@ def team_season_filter(data, team_dict, selected_team, game_type_pick):
     return team_data
 
 
-def posteam_data(raw_data, team, game_type_pick):
+def posteam_data(raw_data, team):
     """
     Filters raw data to only include plays where the selected team is on offense.
     """
     data = raw_data[(raw_data.posteam == team)]
     return data
-
-
-def avg_score(data, team_dict, game_type_pick):
-    """
-    Returns average score from all NFL teams for the given filters.
-    """
-    temp = data.copy()
-    games = 0
-    score = 0
-    for team in team_dict.values():
-        data = (
-            temp[(temp.home_team == team) | (temp.away_team == team)]
-            .groupby(["week", "home_team", "away_team"])["home_score", "away_score"]
-            .max()
-            .reset_index()
-        )
-        team_score = (
-            data[data.home_team == team].home_score.sum()
-            + data[data.away_team == team].away_score.sum()
-        )
-        games += data.shape[0]
-        score += team_score
-    return round(score / games, 1)
 
 
 def season_kpis(season_games, team_dict, selected_team):
@@ -150,6 +127,50 @@ def season_kpis(season_games, team_dict, selected_team):
     )
 
     return wins, losses, avg_points, avg_points_against
+
+
+def avg_score(data, team_dict, comparison):
+    """
+    Returns average score from all NFL teams for the given filters.
+    """
+    temp = data.copy()
+    if comparison == "All NFL":
+        games = 0
+        score = 0
+        for team in team_dict.values():
+            data = (
+                temp[(temp.home_team == team) | (temp.away_team == team)]
+                .groupby(["week", "home_team", "away_team"])["home_score", "away_score"]
+                .max()
+                .reset_index()
+            )
+            team_score = (
+                data[data.home_team == team].home_score.sum()
+                + data[data.away_team == team].away_score.sum()
+            )
+            games += data.shape[0]
+            score += team_score
+        return round(score / games, 1), round(score / games, 1)
+    else:
+        team = team_dict[comparison]
+        data = data[((data["home_team"] == team) | (data["away_team"] == team))]
+        avg_points = round(
+            (
+                data[data.home_team == team].home_score.sum()
+                + data[data.away_team == team].away_score.sum()
+            )
+            / data.shape[0],
+            1,
+        )
+        avg_points_against = round(
+            (
+                data[data.home_team == team].away_score.sum()
+                + data[data.away_team == team].home_score.sum()
+            )
+            / data.shape[0],
+            1,
+        )
+        return avg_points, avg_points_against
 
 
 def team_pass_stats(team_data, team_dict, selected_team):

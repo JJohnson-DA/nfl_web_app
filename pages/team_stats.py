@@ -36,6 +36,9 @@ def app():
             "Regular/Playoff Games:",
             options=["Regular Season", "Playoffs", "All Games"],
         )
+        comparison = st.selectbox(
+            "Comparison Team:", options=["All NFL"] + team_options
+        )
 
     # ==== Team Customs ========================================================
     url_logo = team_info[team_info.team_nick == selected_team].team_logo_espn.values[0]
@@ -92,7 +95,9 @@ def app():
             wins, losses, avg_points, avg_points_against = funcs.season_kpis(
                 season_games, team_dict, selected_team
             )
-            nfl_avg_points = funcs.avg_score(data, team_dict, game_type_pick)
+            comparison_points, comparison_points_against = funcs.avg_score(
+                data, team_dict, comparison
+            )
 
             # ---- Create KPI visuals ----
             kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -108,13 +113,13 @@ def app():
                 st.metric(
                     label="Avg Points",
                     value=avg_points,
-                    delta=f"{round(avg_points - nfl_avg_points,1)} vs NFL",
+                    delta=f"{round(avg_points - comparison_points,1)} vs {comparison}",
                 )
             with kpi4:
                 st.metric(
                     "Avg Points Against",
                     value=avg_points_against,
-                    delta=f"{round(avg_points_against - nfl_avg_points,1)} vs NFL",
+                    delta=f"{round(avg_points_against - comparison_points_against,1)} vs {comparison}",
                     delta_color="inverse",
                 )
 
@@ -223,13 +228,22 @@ def app():
                     interceptions,
                 ) = funcs.team_pass_stats(team_data, team_dict, selected_team)
                 # Get League Passing Stats
-                (
-                    league_pass_attempts,
-                    league_comp_perc,
-                    league_pass_yards,
-                    league_pass_td,
-                    league_interceptions,
-                ) = funcs.league_avg_pass_stats(data)
+                if comparison == "All NFL":
+                    (
+                        comparison_pass_attempts,
+                        comparison_comp_perc,
+                        comparison_pass_yards,
+                        comparison_pass_tds,
+                        comparison_interceptions,
+                    ) = funcs.league_avg_pass_stats(data)
+                else:
+                    (
+                        comparison_pass_attempts,
+                        comparison_comp_perc,
+                        comparison_pass_yards,
+                        comparison_pass_tds,
+                        comparison_interceptions,
+                    ) = funcs.team_pass_stats(data, team_dict, comparison)
 
                 # Create KPI layout
                 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -238,33 +252,62 @@ def app():
                     st.metric(
                         label="Attempts",
                         value=pass_attempts,
-                        delta=f"{pass_attempts - league_pass_attempts} vs NFL",
+                        delta=f"{pass_attempts - comparison_pass_attempts} vs {comparison}",
                     )
                 with kpi2:  # Completion %
                     st.metric(
                         label="Completion %",
                         value=comp_perc,
-                        delta=f"{round(comp_perc - league_comp_perc, 1)} vs NFL",
+                        delta=f"{round(comp_perc - comparison_comp_perc, 1)} vs {comparison}",
                     )
                 with kpi3:  # Yards
                     st.metric(
                         label="Passing Yds",
                         value=pass_yards,
-                        delta=f"{pass_yards - league_pass_yards} vs NFL",
+                        delta=f"{pass_yards - comparison_pass_yards} vs {comparison}",
                     )
                 with kpi4:  # TD
                     st.metric(
                         label="Touchdowns",
                         value=pass_td,
-                        delta=f"{pass_td - league_pass_td} vs NFL",
+                        delta=f"{pass_td - comparison_pass_tds} vs {comparison}",
                     )
                 with kpi5:  # Interceptions
                     st.metric(
                         label="Interceptions",
                         value=interceptions,
-                        delta=f"{interceptions - league_interceptions} vs NFL",
+                        delta=f"{interceptions - comparison_interceptions} vs {comparison}",
                         delta_color="inverse",
                     )
+
+                pos_data = (
+                    funcs.posteam_data(
+                        data[["posteam", "complete_pass", "yardline_100"]],
+                        team_dict[selected_team],
+                    )
+                    .groupby("yardline_100")["complete_pass"]
+                    .agg(["mean", "count"])
+                    .reset_index()
+                )
+                # Completion Rate by Field Position
+                fig = px.bar(
+                    pos_data,
+                    title="Complete Rate by Field Position",
+                    y="mean",
+                    hover_data=["mean", "count"],
+                    color="count",
+                    labels={
+                        "count": "Number of Passes",
+                        "mean": "Completion Rate",
+                        "index": "Yardline",
+                    },
+                )
+                fig.update_xaxes(showgrid=False)
+                fig.update_yaxes(showgrid=False, rangemode="tozero")
+                st.plotly_chart(
+                    fig, use_container_width=True, config={"displayModeBar": False}
+                )
+
                 st.write("")
                 st.write("---")
 
@@ -278,13 +321,22 @@ def app():
                     yds_after_catch,
                     rec_td,
                 ) = funcs.team_rec_stats(team_data, team_dict, selected_team)
-                (
-                    league_receptions,
-                    league_rec_yards,
-                    league_pass_length,
-                    league_yds_after_catch,
-                    league_rec_td,
-                ) = funcs.league_avg_rec_stats(data)
+                if comparison == "All NFL":
+                    (
+                        comparison_rec,
+                        comparison_rec_yds,
+                        comparison_pass_length,
+                        comparison_yac,
+                        comparison_rec_td,
+                    ) = funcs.league_avg_rec_stats(data)
+                else:
+                    (
+                        comparison_rec,
+                        comparison_rec_yds,
+                        comparison_pass_length,
+                        comparison_yac,
+                        comparison_rec_td,
+                    ) = funcs.team_rec_stats(data, team_dict, comparison)
 
                 # Create KPI layout
                 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -293,31 +345,31 @@ def app():
                     st.metric(
                         label="Receptions",
                         value=receptions,
-                        delta=f"{receptions - league_receptions} vs NFL",
+                        delta=f"{receptions - comparison_rec} vs {comparison}",
                     )
                 with kpi2:  # Avg Rec Yds
                     st.metric(
                         label="Yds/Pass",
                         value=avg_rec_yds,
-                        delta=f"{round(avg_rec_yds - league_rec_yards, 1)} vs NFL",
+                        delta=f"{round(avg_rec_yds - comparison_rec_yds, 1)} vs {comparison}",
                     )
                 with kpi3:  # Avg Pass Length
                     st.metric(
                         label="Pass Distance",
                         value=avg_pass_length,
-                        delta=f"{round(avg_pass_length - league_pass_length, 1)} vs NFL",
+                        delta=f"{round(avg_pass_length - comparison_pass_length, 1)} vs {comparison}",
                     )
                 with kpi4:  # Yds After Catch
                     st.metric(
                         label="Yds After Catch",
                         value=yds_after_catch,
-                        delta=f"{round(yds_after_catch -  league_yds_after_catch,1)} vs NFL",
+                        delta=f"{round(yds_after_catch -  comparison_yac,1)} vs {comparison}",
                     )
                 with kpi5:  # Rec TD
                     st.metric(
                         label="Rec TD",
                         value=rec_td,
-                        delta=f"{rec_td - league_rec_td} vs NFL",
+                        delta=f"{rec_td - comparison_rec_td} vs {comparison}",
                     )
                 st.write("")
                 st.write("---")
@@ -328,12 +380,20 @@ def app():
                 rushes, avg_rush_length, rush_yards, rush_td = funcs.team_rush_stats(
                     team_data, team_dict, selected_team
                 )
-                (
-                    league_rushes,
-                    league_rush_length,
-                    league_rush_yards,
-                    league_rush_td,
-                ) = funcs.league_avg_rush_stats(data)
+                if comparison == "All NFL":
+                    (
+                        comparison_rushes,
+                        comparison_rush_length,
+                        comparison_rush_yds,
+                        comparison_rush_td,
+                    ) = funcs.league_avg_rush_stats(data)
+                else:
+                    (
+                        comparison_rushes,
+                        comparison_rush_length,
+                        comparison_rush_yds,
+                        comparison_rush_td,
+                    ) = funcs.team_rush_stats(data, team_dict, comparison)
                 # Create KPI layout
                 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
                 # Fill KPI containers
@@ -341,25 +401,25 @@ def app():
                     st.metric(
                         label="Rushes",
                         value=rushes,
-                        delta=f"{rushes - league_rushes} vs NFL",
+                        delta=f"{rushes - comparison_rushes} vs {comparison}",
                     )
                 with kpi2:  # Rush Length
                     st.metric(
                         label="Avg Rush",
                         value=avg_rush_length,
-                        delta=f"{round(avg_rush_length - league_rush_length, 1)} vs NFL",
+                        delta=f"{round(avg_rush_length - comparison_rush_length, 1)} vs {comparison}",
                     )
                 with kpi3:  # Total Rush Yards
                     st.metric(
                         label="Total Rushing",
                         value=rush_yards,
-                        delta=f"{round(rush_yards - league_rush_yards, 1)} vs NFL",
+                        delta=f"{round(rush_yards - comparison_rush_yds, 1)} vs {comparison}",
                     )
                 with kpi4:  # Rushing TD
                     st.metric(
                         label="Rushing TD",
                         value=rush_td,
-                        delta=f"{round(rush_td -  league_rush_td,1)} vs NFL",
+                        delta=f"{round(rush_td -  comparison_rush_td,1)} vs {comparison}",
                     )
 
         # ==== Defensive Stats =====================================================
