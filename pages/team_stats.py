@@ -39,6 +39,12 @@ def app():
         comparison = st.selectbox(
             "Comparison Team:", options=["All NFL"] + team_options
         )
+        # Pull team abbreviations to use in filters/functions
+        team_abb = team_dict[selected_team]
+        if comparison == "All NFL":
+            comp_abb = "All NFL"
+        else:
+            comp_abb = team_dict[comparison]
 
     # ==== Team Customs ========================================================
     url_logo = team_info[team_info.team_nick == selected_team].team_logo_espn.values[0]
@@ -76,12 +82,10 @@ def app():
         )
     else:
         # ---- Team Data Filtering ----
-        team_data = funcs.team_season_filter(
-            data, team_dict, selected_team, game_type_pick
-        )
+        team_data = funcs.team_season_filter(data, team_abb)
 
-        # ==== KPI Strip ===========================================================
-        with st.container():
+        # ==== High Level Stats ================================================
+        with st.container():  # ---- Row 1 ----
             season_games = (
                 team_data.groupby(["week", "home_team", "away_team"])[
                     "home_score", "away_score"
@@ -93,7 +97,7 @@ def app():
 
             # ---- Get data for KPIs ----
             wins, losses, avg_points, avg_points_against = funcs.season_kpis(
-                season_games, team_dict, selected_team
+                season_games, team_abb
             )
             comparison_points, comparison_points_against = funcs.avg_score(
                 data, team_dict, comparison
@@ -122,95 +126,90 @@ def app():
                     delta=f"{round(avg_points_against - comparison_points_against,1)} vs {comparison}",
                     delta_color="inverse",
                 )
-
-        # ==== High Level Stats ====================================================
-        with st.expander("High Level Overall"):
-            with st.container():  # ---- Yards ----
-                kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-                with kpi1:  # Total Yards
-                    st.metric(
-                        label="Total Yds",
-                        value=round(
-                            team_data[
-                                team_data.posteam == team_dict[selected_team]
-                            ].yards_gained.sum()
-                        ),
-                    )
-                with kpi2:  # yards/game
-                    st.metric(
-                        label="Yds/Game",
-                        value=round(
-                            team_data[team_data.posteam == team_dict[selected_team]]
-                            .groupby("week")["yards_gained"]
-                            .sum()
-                            .reset_index()
-                            .yards_gained.mean()
-                        ),
-                    )
-                with kpi3:  # rushing yards
-                    st.metric(
-                        label="Rushing Yds",
-                        value=round(
-                            team_data[
-                                (team_data.posteam == team_dict[selected_team])
-                                & (team_data.play_type == "run")
-                            ].yards_gained.sum()
-                        ),
-                    )
-                with kpi4:  # passing yards
-                    st.metric(
-                        label="Passing Yds",
-                        value=round(
-                            team_data[
-                                (team_data.posteam == team_dict[selected_team])
-                                & (team_data.play_type == "pass")
-                            ].yards_gained.sum()
-                        ),
-                    )
-
-                fig = px.bar(  # Yards/game barchart
-                    data_frame=team_data[
-                        (team_data.posteam == team_dict[selected_team])
-                        & (
-                            (team_data.play_type == "run")
-                            | (team_data.play_type == "pass")
-                        )
-                    ][["week", "play_type", "yards_gained"]]
-                    .groupby(["week", "play_type"])
-                    .sum()
-                    .reset_index(),
-                    title="Yards/Game by Play Type",
-                    x="week",
-                    y="yards_gained",
-                    color="play_type",
-                    color_discrete_sequence=[color1, color2],
-                    opacity=0.6,
-                    labels={
-                        "week": "Week",
-                        "yards_gained": "Yards Gained on Play",
-                        "play_type": "Play Type",
-                    },
+        st.write("")
+        with st.container():  # ---- Row 2 ----
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            with kpi1:  # Total Yards
+                st.metric(
+                    label="Total Yds",
+                    value=round(
+                        team_data[
+                            team_data.posteam == team_dict[selected_team]
+                        ].yards_gained.sum()
+                    ),
                 )
-                fig.update_xaxes(showgrid=False)
-                fig.update_yaxes(showgrid=False, rangemode="tozero")
-                st.plotly_chart(
-                    fig, config={"displayModeBar": False}, use_container_width=True
+            with kpi2:  # yards/game
+                st.metric(
+                    label="Yds/Game",
+                    value=round(
+                        team_data[team_data.posteam == team_dict[selected_team]]
+                        .groupby("week")["yards_gained"]
+                        .sum()
+                        .reset_index()
+                        .yards_gained.mean()
+                    ),
                 )
-                # st.write(
-                #     team_data.groupby("week")[
-                #         ["week", "home_team", "away_team", "posteam"]
-                #     ].max()
-                # )
-                # game_data = team_data.groupby("week")[
-                #     ["week", "home_team", "away_team", "posteam"]
-                # ].max()
-                # opponents = []
-                # for i in game_data.index:
-                #     if game_data.loc[i, "home_team"] == team_dict[selected_team]:
-                #         opponents.append(game_data.loc[i, "away_team"])
-                #     else:
-                #         opponents.append(game_data.loc[i, "home_team"])
-                # st.write(opponents)
+            with kpi3:  # rushing yards
+                st.metric(
+                    label="Rushing Yds",
+                    value=round(
+                        team_data[
+                            (team_data.posteam == team_dict[selected_team])
+                            & (team_data.play_type == "run")
+                        ].yards_gained.sum()
+                    ),
+                )
+            with kpi4:  # passing yards
+                st.metric(
+                    label="Passing Yds",
+                    value=round(
+                        team_data[
+                            (team_data.posteam == team_dict[selected_team])
+                            & (team_data.play_type == "pass")
+                        ].yards_gained.sum()
+                    ),
+                )
+
+            fig = px.bar(  # Yards/game barchart
+                data_frame=team_data[
+                    (team_data.posteam == team_dict[selected_team])
+                    & ((team_data.play_type == "run") | (team_data.play_type == "pass"))
+                ][["week", "play_type", "yards_gained"]]
+                .groupby(["week", "play_type"])
+                .sum()
+                .reset_index(),
+                title="Yards/Game by Play Type",
+                x="week",
+                y="yards_gained",
+                color="play_type",
+                color_discrete_sequence=[color1, color2],
+                opacity=0.6,
+                labels={
+                    "week": "Week",
+                    "yards_gained": "Yards Gained on Play",
+                    "play_type": "Play Type",
+                },
+            )
+            fig.update_xaxes(showgrid=False)
+            fig.update_yaxes(showgrid=False, rangemode="tozero")
+            st.plotly_chart(
+                fig, config={"displayModeBar": False}, use_container_width=True
+            )
+            # st.write(
+            #     team_data.groupby("week")[
+            #         ["week", "home_team", "away_team", "posteam"]
+            #     ].max()
+            # )
+            # game_data = team_data.groupby("week")[
+            #     ["week", "home_team", "away_team", "posteam"]
+            # ].max()
+            # opponents = []
+            # for i in game_data.index:
+            #     if game_data.loc[i, "home_team"] == team_dict[selected_team]:
+            #         opponents.append(game_data.loc[i, "away_team"])
+            #     else:
+            #         opponents.append(game_data.loc[i, "home_team"])
+            # st.write(opponents)
 
         # --- Miscellaneous ----
         # Plays, 1st downs, 3rd down conversion rate, redzone appearances, TD, FG
@@ -226,7 +225,7 @@ def app():
                     pass_yards,
                     pass_td,
                     interceptions,
-                ) = funcs.team_pass_stats(team_data, team_dict, selected_team)
+                ) = funcs.team_pass_stats(team_data, team_abb)
                 # Get League Passing Stats
                 if comparison == "All NFL":
                     (
@@ -243,7 +242,7 @@ def app():
                         comparison_pass_yards,
                         comparison_pass_tds,
                         comparison_interceptions,
-                    ) = funcs.team_pass_stats(data, team_dict, comparison)
+                    ) = funcs.team_pass_stats(data, comp_abb)
 
                 # Create KPI layout
                 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -282,8 +281,7 @@ def app():
 
                 pos_data = (
                     funcs.posteam_data(
-                        data[["posteam", "complete_pass", "yardline_100"]],
-                        team_dict[selected_team],
+                        data[["posteam", "complete_pass", "yardline_100"]], team_abb,
                     )
                     .groupby("yardline_100")["complete_pass"]
                     .agg(["mean", "count"])
@@ -320,7 +318,7 @@ def app():
                     avg_pass_length,
                     yds_after_catch,
                     rec_td,
-                ) = funcs.team_rec_stats(team_data, team_dict, selected_team)
+                ) = funcs.team_rec_stats(team_data, team_abb)
                 if comparison == "All NFL":
                     (
                         comparison_rec,
@@ -336,7 +334,7 @@ def app():
                         comparison_pass_length,
                         comparison_yac,
                         comparison_rec_td,
-                    ) = funcs.team_rec_stats(data, team_dict, comparison)
+                    ) = funcs.team_rec_stats(data, comp_abb)
 
                 # Create KPI layout
                 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -378,7 +376,7 @@ def app():
                 st.subheader("Rushing Stats")
                 # rushes, Yds, TD, avg run length (dist)
                 rushes, avg_rush_length, rush_yards, rush_td = funcs.team_rush_stats(
-                    team_data, team_dict, selected_team
+                    team_data, team_abb
                 )
                 if comparison == "All NFL":
                     (
@@ -393,7 +391,7 @@ def app():
                         comparison_rush_length,
                         comparison_rush_yds,
                         comparison_rush_td,
-                    ) = funcs.team_rush_stats(data, team_dict, comparison)
+                    ) = funcs.team_rush_stats(data, comp_abb)
                 # Create KPI layout
                 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
                 # Fill KPI containers
@@ -424,19 +422,98 @@ def app():
 
         # ==== Defensive Stats =====================================================
         with st.expander("Defense"):
-            st.write("Stats Here.")
-        # ---- Tackles/Sacks ----
-        # Tackles for loss, Sacks, 4th down stops (%), goal line stops (%)
+            def_data = team_data[team_data.defteam == team_abb]
+            (
+                tackles,
+                sacks,
+                yds_allowed,
+                turnovers,
+                td,
+                tfl,
+                sacks_per_game,
+                yds_given_per_game,
+                third_perc,
+                gl_stand_perc,
+            ) = funcs.team_def_stats(def_data)
 
-        # ---- Turnovers ----
-        # Int, Forced Fumbles, Fumble Recoveries
+            with st.container():
+                # Create KPI layout
+                kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+                # Fill KPI containers
+                with kpi1:  # Tackles
+                    st.metric(
+                        label="Tackles",
+                        value=tackles,
+                        # delta=f"{pass_attempts - comparison_pass_attempts} vs {comparison}",
+                    )
+                with kpi2:  # Sacks
+                    st.metric(
+                        label="Sacks",
+                        value=sacks,
+                        # delta=f"{round(comp_perc - comparison_comp_perc, 1)} vs {comparison}",
+                    )
+                with kpi3:  # Yards Allowed
+                    st.metric(
+                        label="Yds Allowed",
+                        value=yds_allowed,
+                        # delta=f"{pass_yards - comparison_pass_yards} vs {comparison}",
+                    )
+                with kpi4:  # Turnovers
+                    st.metric(
+                        label="Turnovers",
+                        value=turnovers,
+                        # delta=f"{pass_td - comparison_pass_tds} vs {comparison}",
+                    )
+                with kpi5:  # Touchdowns
+                    st.metric(
+                        label="Touchdowns",
+                        value=td,
+                        # delta=f"{interceptions - comparison_interceptions} vs {comparison}",
+                        # delta_color="inverse",
+                    )
+            st.write("")
+            with st.container():
+                # Create KPI layout
+                kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
+                # Fill KPI containers
+                with kpi1:  # Tackles for loss
+                    st.metric(
+                        label="Tackles for Loss",
+                        value=tfl,
+                        # delta=f"{pass_attempts - comparison_pass_attempts} vs {comparison}",
+                    )
+                with kpi2:  # Sacks/Game
+                    st.metric(
+                        label="Sacks/Game",
+                        value=sacks_per_game,
+                        # delta=f"{round(comp_perc - comparison_comp_perc, 1)} vs {comparison}",
+                    )
+                with kpi3:  # Yards Allowed per game
+                    st.metric(
+                        label="Yds Allowed/Game",
+                        value=yds_given_per_game,
+                        # delta=f"{pass_yards - comparison_pass_yards} vs {comparison}",
+                    )
+                with kpi4:  # 3rd Down %
+                    st.metric(
+                        label="3rd Down Stop %",
+                        value=third_perc,
+                        # delta=f"{pass_td - comparison_pass_tds} vs {comparison}",
+                    )
+                with kpi5:  # Goal Line Stand %
+                    st.metric(
+                        label="GL Stand %",
+                        value=gl_stand_perc,
+                        # delta=f"{interceptions - comparison_interceptions} vs {comparison}",
+                        # delta_color="inverse",
+                    )
 
-        # ---- Scoring ----
-        # Fumble TD, Int TD, Safety
+            # ---- Pass Defense ----
 
-        # ---- Pass Defense ----
+            # ---- Rush Defense ----
 
-        # ---- Rush Defense ----
+            # ---- Turnovers ----
+            # Int, Forced Fumbles, Fumble Recoveries
 
         # ==== Special Teams Stats =================================================
         with st.expander("Special Teams"):
@@ -465,6 +542,3 @@ def app():
         # fig.update_yaxes(showgrid=False, rangemode="tozero")
 
         # st.plotly_chart(fig, use_container_width=True)
-
-
-# %%

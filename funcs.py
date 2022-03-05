@@ -62,15 +62,12 @@ def get_team_info():
     return data
 
 
-def team_season_filter(data, team_dict, selected_team, game_type_pick):
+def team_season_filter(data, team_abb):
     """
     Filters raw data based on selected filters for season, team, and home/away/both
     """
     team_data = data[
-        (
-            (data["home_team"] == team_dict[selected_team])
-            | (data["away_team"] == team_dict[selected_team])
-        )
+        ((data["home_team"] == team_abb) | (data["away_team"] == team_abb))
     ]
     return team_data
 
@@ -83,44 +80,36 @@ def posteam_data(raw_data, team):
     return data
 
 
-def season_kpis(season_games, team_dict, selected_team):
+def season_kpis(season_games, team_abb):
     """
     Returns wins, losses, avg points, and average points against
     """
     wins = sum(
-        (season_games.home_team == team_dict[selected_team])
+        (season_games.home_team == team_abb)
         & (season_games.home_score > season_games.away_score)
     ) + sum(
-        (season_games.away_team == team_dict[selected_team])
+        (season_games.away_team == team_abb)
         & (season_games.home_score < season_games.away_score)
     )
     losses = sum(
-        (season_games.home_team == team_dict[selected_team])
+        (season_games.home_team == team_abb)
         & (season_games.home_score < season_games.away_score)
     ) + sum(
-        (season_games.away_team == team_dict[selected_team])
+        (season_games.away_team == team_abb)
         & (season_games.home_score > season_games.away_score)
     )
     avg_points = round(
         (
-            season_games[
-                season_games.home_team == team_dict[selected_team]
-            ].home_score.sum()
-            + season_games[
-                season_games.away_team == team_dict[selected_team]
-            ].away_score.sum()
+            season_games[season_games.home_team == team_abb].home_score.sum()
+            + season_games[season_games.away_team == team_abb].away_score.sum()
         )
         / season_games.shape[0],
         1,
     )
     avg_points_against = round(
         (
-            season_games[
-                season_games.home_team == team_dict[selected_team]
-            ].away_score.sum()
-            + season_games[
-                season_games.away_team == team_dict[selected_team]
-            ].home_score.sum()
+            season_games[season_games.home_team == team_abb].away_score.sum()
+            + season_games[season_games.away_team == team_abb].home_score.sum()
         )
         / season_games.shape[0],
         1,
@@ -173,11 +162,11 @@ def avg_score(data, team_dict, comparison):
         return avg_points, avg_points_against
 
 
-def team_pass_stats(team_data, team_dict, selected_team):
+def team_pass_stats(team_data, team_abb):
     """
     Returns team passing attempts, comp %, yards, TD, and Int
     """
-    data = team_data[team_data.posteam == team_dict[selected_team]]
+    data = team_data[team_data.posteam == team_abb]
     pass_attempts = round(data[data.sack == 0].pass_attempt.sum())
     comp_perc = round((data.complete_pass.sum() / pass_attempts) * 100, 1,)
     pass_yards = round(data[data.play_type == "pass"].yards_gained.sum())
@@ -244,12 +233,12 @@ def league_avg_pass_stats(raw):
     )
 
 
-def team_rec_stats(team_data, team_dict, selected_team):
+def team_rec_stats(team_data, team_abb):
     """
     Returns team receptions, avg pass length, yds/rec, and rec td
     """
     # Data Adjustments
-    data = team_data[team_data.posteam == team_dict[selected_team]]
+    data = team_data[team_data.posteam == team_abb]
     data["pass_length"] = data.yards_gained - data.yards_after_catch
     # Metrics
     receptions = round(data.complete_pass.sum())
@@ -296,12 +285,12 @@ def league_avg_rec_stats(raw):
     )
 
 
-def team_rush_stats(team_data, team_dict, selected_team):
+def team_rush_stats(team_data, team_abb):
     """
     Returns team rushes, yds/rush, total rush yards, and rushing TD
     """
     # Data Adjustments
-    data = team_data[team_data.posteam == team_dict[selected_team]]
+    data = team_data[team_data.posteam == team_abb]
     # Metrics
     rushes = round(data.rush_attempt.sum())
     avg_rush_length = round(data[data.rush_attempt == 1].yards_gained.mean(), 1)
@@ -342,3 +331,45 @@ def league_avg_rush_stats(raw):
         league_rush_yards,
         league_rush_td,
     )
+
+
+def team_def_stats(def_data):
+    data = def_data.copy()
+    # tackles
+    tackles = round(data.assist_tackle.sum() + data.solo_tackle.sum())
+    # sacks
+    sacks = round(data.sack.sum())
+    # yards allowed
+    yds_allowed = round(data.yards_gained.sum())
+    # Turnovers
+    turnovers = round(data.interception.sum() + data.fumble_lost.sum())
+    # TD
+    td = round(data[data.td_team == data.defteam].shape[0])
+    # tackles for loss
+    tfl = data[
+        ((data.solo_tackle == 1) | (data.assist_tackle == 1)) & (data.yards_gained < 0)
+    ].shape[0]
+    # sacks/game
+    sacks_per_game = round(data.groupby("week")["sack"].sum().mean(), 1)
+    # yards given/game
+    yds_given_per_game = round(data.groupby("week")["yards_gained"].sum().mean())
+    # 3rd down stop % (third_down_failed, third_down_converted)
+    third_perc = round(
+        (data.third_down_converted.sum() / data.third_down_failed.sum()) * 100, 1
+    )
+    # goal line stands
+    gl_stand_perc = round((1 - data[data.goal_to_go == 1].groupby(['week', 'drive'])['touchdown'].sum().mean())*100,1)
+
+    return (
+        tackles,
+        sacks,
+        yds_allowed,
+        turnovers,
+        td,
+        tfl,
+        sacks_per_game,
+        yds_given_per_game,
+        third_perc,
+        gl_stand_perc,
+    )
+
