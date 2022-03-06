@@ -423,19 +423,14 @@ def app():
         # ==== Defensive Stats =====================================================
         with st.expander("Defense"):
             def_data = team_data[team_data.defteam == team_abb]
-            (
-                tackles,
-                sacks,
-                yds_allowed,
-                turnovers,
-                td,
-                tfl,
-                sacks_per_game,
-                yds_given_per_game,
-                third_perc,
-                gl_stand_perc,
-            ) = funcs.team_def_stats(def_data)
-
+            team_def = funcs.team_def_stats(def_data)
+            if comp_abb == "All NFL":
+                compare_def = funcs.league_def_stats(data)
+            else:
+                comp_data = funcs.team_season_filter(data, comp_abb)
+                comp_def = comp_data[comp_data.defteam == comp_abb]
+                compare_def = funcs.team_def_stats(comp_def)
+            st.subheader("Overall Defensive Stats")
             with st.container():
                 # Create KPI layout
                 kpi1, kpi2, kpi3, kpi4, kpi5 = st.columns(5)
@@ -443,33 +438,33 @@ def app():
                 with kpi1:  # Tackles
                     st.metric(
                         label="Tackles",
-                        value=tackles,
-                        # delta=f"{pass_attempts - comparison_pass_attempts} vs {comparison}",
+                        value=team_def["tackles"],
+                        delta=f"{int(team_def['tackles'])-int(compare_def['tackles'])} vs {comparison}",
                     )
                 with kpi2:  # Sacks
                     st.metric(
                         label="Sacks",
-                        value=sacks,
-                        # delta=f"{round(comp_perc - comparison_comp_perc, 1)} vs {comparison}",
+                        value=team_def["sacks"],
+                        delta=f"{round(int(team_def.sacks) - int(compare_def.sacks), 1)} vs {comparison}",
                     )
                 with kpi3:  # Yards Allowed
                     st.metric(
                         label="Yds Allowed",
-                        value=yds_allowed,
-                        # delta=f"{pass_yards - comparison_pass_yards} vs {comparison}",
+                        value=team_def["yds_allowed"],
+                        delta=f"{round(int(team_def.yds_allowed) - int(compare_def.yds_allowed))} vs {comparison}",
+                        delta_color="inverse",
                     )
                 with kpi4:  # Turnovers
                     st.metric(
                         label="Turnovers",
-                        value=turnovers,
-                        # delta=f"{pass_td - comparison_pass_tds} vs {comparison}",
+                        value=team_def["turnovers"],
+                        delta=f"{round(int(team_def.turnovers) - int(compare_def.turnovers))} vs {comparison}",
                     )
                 with kpi5:  # Touchdowns
                     st.metric(
                         label="Touchdowns",
-                        value=td,
-                        # delta=f"{interceptions - comparison_interceptions} vs {comparison}",
-                        # delta_color="inverse",
+                        value=team_def["td"],
+                        delta=f"{int(team_def.td) - int(compare_def.td)} vs {comparison}",
                     )
             st.write("")
             with st.container():
@@ -479,33 +474,33 @@ def app():
                 with kpi1:  # Tackles for loss
                     st.metric(
                         label="Tackles for Loss",
-                        value=tfl,
-                        # delta=f"{pass_attempts - comparison_pass_attempts} vs {comparison}",
+                        value=team_def["tfl"],
+                        delta=f"{int(team_def.tfl) - int(compare_def.tfl)} vs {comparison}",
                     )
                 with kpi2:  # Sacks/Game
                     st.metric(
                         label="Sacks/Game",
-                        value=sacks_per_game,
-                        # delta=f"{round(comp_perc - comparison_comp_perc, 1)} vs {comparison}",
+                        value=team_def["sacks_per_game"],
+                        delta=f"{round(int(team_def.sacks_per_game) - int(compare_def.sacks_per_game), 1)} vs {comparison}",
                     )
                 with kpi3:  # Yards Allowed per game
                     st.metric(
                         label="Yds Allowed/Game",
-                        value=yds_given_per_game,
-                        # delta=f"{pass_yards - comparison_pass_yards} vs {comparison}",
+                        value=team_def["yds_given_per_game"],
+                        delta=f"{int(team_def.yds_given_per_game) - int(compare_def.yds_given_per_game)} vs {comparison}",
+                        delta_color="inverse",
                     )
                 with kpi4:  # 3rd Down %
                     st.metric(
                         label="3rd Down Stop %",
-                        value=third_perc,
-                        # delta=f"{pass_td - comparison_pass_tds} vs {comparison}",
+                        value=team_def["third_perc"],
+                        delta=f"{round(float(team_def.third_perc) - float(compare_def.third_perc),1)} vs {comparison}",
                     )
                 with kpi5:  # Goal Line Stand %
                     st.metric(
                         label="GL Stand %",
-                        value=gl_stand_perc,
-                        # delta=f"{interceptions - comparison_interceptions} vs {comparison}",
-                        # delta_color="inverse",
+                        value=team_def["gl_stand_perc"],
+                        delta=f"{round(float(team_def.gl_stand_perc) - float(compare_def.gl_stand_perc),1)} vs {comparison}",
                     )
 
             # ---- Pass Defense ----
@@ -514,31 +509,3 @@ def app():
 
             # ---- Turnovers ----
             # Int, Forced Fumbles, Fumble Recoveries
-
-        # ==== Special Teams Stats =================================================
-        with st.expander("Special Teams"):
-            st.write("Stats Here.")
-
-        # ==== Team Summary ========================================================
-
-        # posteam_data = funcs.posteam_data(raw, team_dict[selected_team], game_type_pick)
-
-        # run_pass_data = posteam_data[
-        #     (posteam_data.play_type == "run") | (posteam_data.play_type == "pass")
-        # ][["yards_gained", "play_type"]]
-
-        # fig = px.histogram(
-        #     run_pass_data[run_pass_data.yards_gained != 0],
-        #     x="yards_gained",
-        #     color="play_type",
-        #     barmode="overlay",
-        #     title="Distribution of Yards Gained",
-        #     color_discrete_sequence=[color1, color2],
-        #     labels={"count": "Number of Plays", "yards_gained": "Yards Gained on Play"},
-        # )
-        # fig.update_layout(legend=dict(y=0.98, x=0.01))
-        # # fig.update_layout({"plot_bgcolor": "lightgray"})
-        # fig.update_xaxes(showgrid=False)
-        # fig.update_yaxes(showgrid=False, rangemode="tozero")
-
-        # st.plotly_chart(fig, use_container_width=True)

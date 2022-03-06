@@ -335,41 +335,100 @@ def league_avg_rush_stats(raw):
 
 def team_def_stats(def_data):
     data = def_data.copy()
+    df = pd.DataFrame()
     # tackles
-    tackles = round(data.assist_tackle.sum() + data.solo_tackle.sum())
+    df.loc[0, "tackles"] = round(data.assist_tackle.sum() + data.solo_tackle.sum())
     # sacks
-    sacks = round(data.sack.sum())
+    df["sacks"] = round(data.sack.sum())
     # yards allowed
-    yds_allowed = round(data.yards_gained.sum())
+    df["yds_allowed"] = round(data.yards_gained.sum())
     # Turnovers
-    turnovers = round(data.interception.sum() + data.fumble_lost.sum())
+    df["turnovers"] = round(data.interception.sum() + data.fumble_lost.sum())
     # TD
-    td = round(data[data.td_team == data.defteam].shape[0])
+    df["td"] = round(data[data.td_team == data.defteam].shape[0])
     # tackles for loss
-    tfl = data[
+    df["tfl"] = data[
         ((data.solo_tackle == 1) | (data.assist_tackle == 1)) & (data.yards_gained < 0)
     ].shape[0]
     # sacks/game
-    sacks_per_game = round(data.groupby("week")["sack"].sum().mean(), 1)
+    df["sacks_per_game"] = round(data.groupby("week")["sack"].sum().mean(), 1)
     # yards given/game
-    yds_given_per_game = round(data.groupby("week")["yards_gained"].sum().mean())
+    df["yds_given_per_game"] = round(data.groupby("week")["yards_gained"].sum().mean())
     # 3rd down stop % (third_down_failed, third_down_converted)
-    third_perc = round(
-        (data.third_down_converted.sum() / data.third_down_failed.sum()) * 100, 1
-    )
+    df["third_perc"] = round(data[data.down == 3].third_down_failed.mean() * 100, 1)
     # goal line stands
-    gl_stand_perc = round((1 - data[data.goal_to_go == 1].groupby(['week', 'drive'])['touchdown'].sum().mean())*100,1)
-
-    return (
-        tackles,
-        sacks,
-        yds_allowed,
-        turnovers,
-        td,
-        tfl,
-        sacks_per_game,
-        yds_given_per_game,
-        third_perc,
-        gl_stand_perc,
+    df["gl_stand_perc"] = round(
+        (
+            1
+            - data[data.goal_to_go == 1]
+            .groupby(["week", "drive"])["touchdown"]
+            .sum()
+            .mean()
+        )
+        * 100,
+        1,
     )
 
+    return df
+
+
+def league_def_stats(data):
+    data = data.copy()
+    data["total_tackles"] = data.solo_tackle + data.assist_tackle
+    data["total_turnovers"] = data.interception + data.fumble_lost
+    grouped = data.groupby(["defteam"])
+    df = pd.DataFrame()
+    # tackles
+    df.loc[0, "tackles"] = round(grouped.total_tackles.sum().mean())
+    # sacks
+    df["sacks"] = round(grouped.sack.sum().mean())
+    # yards allowed
+    df["yds_allowed"] = round(grouped.yards_gained.sum().mean())
+    # Turnovers
+    df["turnovers"] = round(grouped.total_turnovers.sum().mean())
+    # TD
+    df["td"] = round(
+        data[data.td_team == data.defteam].groupby("defteam").size().mean(), 1
+    )
+    # tackles for loss
+    df["tfl"] = round(
+        data[
+            ((data.solo_tackle == 1) | (data.assist_tackle == 1))
+            & (data.yards_gained < 0)
+        ]
+        .groupby("defteam")
+        .size()
+        .mean()
+    )
+    # sacks/game
+    df["sacks_per_game"] = round(
+        data.groupby(["defteam", "week"])["sack"].sum().mean(), 1
+    )
+    # yards given/game
+    df["yds_given_per_game"] = round(
+        data.groupby(["defteam", "week"])["yards_gained"].sum().mean()
+    )
+    # 3rd down stop % (third_down_failed, third_down_converted)
+    df["third_perc"] = round(
+        data[data.down == 3].groupby("defteam")["third_down_failed"].mean().mean()
+        * 100,
+        1,
+    )
+
+    # goal line stands
+    df["gl_stand_perc"] = round(
+        (
+            1
+            - data[data.goal_to_go == 1]
+            .groupby(["defteam", "week", "drive"])["touchdown"]
+            .sum()
+            .reset_index()
+            .groupby("defteam")["touchdown"]
+            .mean()
+            .mean()
+        )
+        * 100,
+        1,
+    )
+
+    return df
