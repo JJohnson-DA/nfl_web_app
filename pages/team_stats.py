@@ -169,15 +169,23 @@ def app():
                         ].yards_gained.sum()
                     ),
                 )
-
-            fig = px.bar(  # Yards/game barchart
-                data_frame=team_data[
+        with st.container():  # Weekly Summary Plot
+            plot_data = (
+                team_data[
                     (team_data.posteam == team_dict[selected_team])
                     & ((team_data.play_type == "run") | (team_data.play_type == "pass"))
                 ][["week", "play_type", "yards_gained"]]
                 .groupby(["week", "play_type"])
                 .sum()
-                .reset_index(),
+                .reset_index()
+            )
+            game_data = team_data.groupby("week")[
+                ["week", "home_team", "away_team", "posteam"]
+            ].max()
+            y_height = plot_data.groupby("week")["yards_gained"].sum()
+
+            fig = px.bar(  # Yards/game barchart
+                data_frame=plot_data,
                 title="Yards/Game by Play Type",
                 x="week",
                 y="yards_gained",
@@ -190,26 +198,43 @@ def app():
                     "play_type": "Play Type",
                 },
             )
-            fig.update_xaxes(showgrid=False)
-            fig.update_yaxes(showgrid=False, rangemode="tozero")
+
+            opponents = dict()
+            for i in range(game_data.week.min(), game_data.week.max() + 1):
+                try:
+                    if game_data.loc[i, "home_team"] == team_dict[selected_team]:
+                        opponents[i] = team_info[
+                            team_info.team_abbr == game_data.loc[i, "away_team"]
+                        ].team_logo_espn.values[0]
+                    else:
+                        opponents[i] = team_info[
+                            team_info.team_abbr == game_data.loc[i, "home_team"]
+                        ].team_logo_espn.values[0]
+                except KeyError:
+                    opponents[i] = ""
+
+            for key, val in opponents.items():
+                # need a try/except block since by weeks will cause a KeyError
+                try:
+                    fig.add_layout_image(
+                        source=str(val),
+                        xref="x",
+                        yref="y",
+                        x=key,
+                        y=y_height[key] + 10,
+                        xanchor="center",
+                        yanchor="bottom",
+                        sizex=50,
+                        sizey=50,
+                    )
+                except:
+                    pass
+            fig.update_xaxes(showgrid=False,)
+            fig.update_yaxes(showgrid=False,)
+            fig.update_layout(yaxis_range=[0, y_height.max() + 70])
             st.plotly_chart(
                 fig, config={"displayModeBar": False}, use_container_width=True
             )
-            # st.write(
-            #     team_data.groupby("week")[
-            #         ["week", "home_team", "away_team", "posteam"]
-            #     ].max()
-            # )
-            # game_data = team_data.groupby("week")[
-            #     ["week", "home_team", "away_team", "posteam"]
-            # ].max()
-            # opponents = []
-            # for i in game_data.index:
-            #     if game_data.loc[i, "home_team"] == team_dict[selected_team]:
-            #         opponents.append(game_data.loc[i, "away_team"])
-            #     else:
-            #         opponents.append(game_data.loc[i, "home_team"])
-            # st.write(opponents)
 
         # --- Miscellaneous ----
         # Plays, 1st downs, 3rd down conversion rate, redzone appearances, TD, FG
