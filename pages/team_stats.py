@@ -47,7 +47,7 @@ def app():
             comp_abb = team_dict[comparison]
 
     # ==== Team Customs ========================================================
-    url_logo = team_info[team_info.team_nick == selected_team].team_logo_espn.values[0]
+    # url_logo = team_info[team_info.team_nick == selected_team].team_logo_espn.values[0]
     url_team_wordmark = team_info[
         team_info.team_nick == selected_team
     ].team_wordmark.values[0]
@@ -230,8 +230,7 @@ def app():
                 except:
                     pass
             fig.update_xaxes(showgrid=False,)
-            fig.update_yaxes(showgrid=False,)
-            fig.update_layout(yaxis_range=[0, y_height.max() + 70])
+            fig.update_yaxes(showgrid=False, range=[0, y_height.max() + 70])
             st.plotly_chart(
                 fig, config={"displayModeBar": False}, use_container_width=True
             )
@@ -322,7 +321,7 @@ def app():
                     labels={
                         "count": "Number of Passes",
                         "mean": "Completion Rate",
-                        "index": "Yardline",
+                        "index": "Distance from Endzone",
                     },
                 )
                 fig.update_xaxes(showgrid=False)
