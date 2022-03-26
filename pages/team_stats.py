@@ -32,12 +32,12 @@ def app():
                 "Select a Team:", options=team_options, index=len(team_options) - 1
             )
         )
+        comparison = st.selectbox(
+            "Comparison Team:", options=["All NFL"] + team_options
+        )
         game_type_pick = st.selectbox(
             "Regular/Playoff Games:",
             options=["Regular Season", "Playoffs", "All Games"],
-        )
-        comparison = st.selectbox(
-            "Comparison Team:", options=["All NFL"] + team_options
         )
         # Pull team abbreviations to use in filters/functions
         team_abb = team_dict[selected_team]

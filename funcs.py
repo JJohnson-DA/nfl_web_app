@@ -432,3 +432,47 @@ def league_def_stats(data):
     )
 
     return df
+
+
+def get_qb_stats(data):
+    data = data.copy()
+    # Pass Yds
+    pass_yds = round(data[data.complete_pass == 1].yards_gained.sum())
+    # Yds/Att
+    yds_per_att = round(pass_yds / data[data.sack == 0].shape[0], 1)
+    # Att
+    att = data.shape[0]
+    # Completions
+    comp = data[data.complete_pass == 1].shape[0]
+    # Cmp %
+    comp_perc = round((comp / att) * 100, 1)
+    # TD
+    td = round(data.pass_touchdown.sum())
+    # INT
+    interceptions = round(data.interception.sum())
+    # 20+ yards
+    over_20 = data[(data.yards_gained >= 20) & (data.sack == 0)].shape[0]
+    # 40+ yards
+    over_40 = data[(data.yards_gained >= 40) & (data.sack == 0)].shape[0]
+    # Longest pass
+    long_pass = round(data.yards_gained.max())
+    # Sacks
+    sacks = round(data.sack.sum())
+    # Sack yards
+    sack_yards = round(data[data.sack == 1].yards_gained.sum())
+
+    return (
+        pass_yds,
+        yds_per_att,
+        att,
+        comp,
+        comp_perc,
+        td,
+        interceptions,
+        over_20,
+        over_40,
+        long_pass,
+        sacks,
+        sack_yards,
+    )
+

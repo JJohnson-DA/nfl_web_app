@@ -42,7 +42,9 @@ def app():
         player_dict = dict(zip(player_key, player_id_list))
         selected_player_key = str(
             st.selectbox(
-                "Select a QB (type to search):", options=sorted(player_dict.keys()),
+                "Select a QB (type to search):",
+                options=sorted(player_dict.keys()),
+                index=sorted(player_dict.keys()).index("Kirk Cousins"),
             )
         )
         player1_id = player_dict[selected_player_key]
@@ -63,10 +65,31 @@ def app():
     color2 = team_info[team_info.team_abbr == playe1_team].team_color2.values[0]
 
     # %% ==== Data Import ======================================================
+    qb_cols = [
+        "week",
+        "qtr",
+        "passer",
+        "yardline_100",
+        "yrdln",
+        "complete_pass",
+        "interception",
+        "sack",
+        "pass_length",
+        "pass_location",
+        "pass_touchdown",
+        "yards_gained",
+        "air_yards",
+        "yards_after_catch",
+        "receiver",
+    ]
+    qb1_data = raw[(raw.passer_id == player1_id) & ((raw["qb_dropback"] == 1))][qb_cols]
+
+    # ==== Page Design =========================================================
+
     # st.subheader(f"Pass Plays for {selected_player_key} in {years[0]}")
     photo, desc = st.columns([1, 1.5])
     with photo:
-        st.image(photo_url, width=300)
+        st.image(photo_url, width=275)
     with desc:
         st.subheader(selected_player_key)
         st.write(f"Height: {player1_info.height.values[0]} inches")
@@ -74,52 +97,101 @@ def app():
         st.write(f"College: {player1_info.college.values[0]}")
         st.write(f"Years in NFL: {round(player1_info.years_exp.values[0])} years")
 
-    # kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    # with kpi1:
-    #     st.write("none")
-    # with kpi2:
-    #     st.write("none")
-    # with kpi3:
-    #     st.write("none")
-    # with kpi4:
-    #     st.write("none")
+    (
+        pass_yds,
+        yds_per_att,
+        att,
+        comp,
+        comp_perc,
+        td,
+        interceptions,
+        over_20,
+        over_40,
+        long_pass,
+        sacks,
+        sack_yards,
+    ) = funcs.get_qb_stats(qb1_data)
 
-    # ==== Team Summary ========================================================
+    with st.container():
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        with kpi1:
+            st.metric(
+                label="Passing Yds", value=pass_yds,
+            )
+        with kpi2:
+            st.metric(
+                label="Yds/Pass", value=yds_per_att,
+            )
+        with kpi3:
+            st.metric(
+                label="Attemps",
+                value=att,
+                # delta=f"{round(avg_points - comparison_points,1)} vs {comparison}",
+            )
+        with kpi4:
+            st.metric(
+                "Completions",
+                value=comp,
+                # delta=f"{round(avg_points_against - comparison_points_against,1)} vs {comparison}",
+                # delta_color="inverse",
+            )
+    st.write("")
+    with st.container():
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        with kpi1:
+            st.metric(
+                label="Touchdowns", value=td,
+            )
+        with kpi2:
+            st.metric(
+                label="Interceptions", value=interceptions,
+            )
+        with kpi3:
+            st.metric(
+                label="Sacks",
+                value=sacks,
+                # delta=f"{round(avg_points - comparison_points,1)} vs {comparison}",
+            )
+        with kpi4:
+            st.metric(
+                "Sack Yards",
+                value=sack_yards,
+                # delta=f"{round(avg_points_against - comparison_points_against,1)} vs {comparison}",
+                # delta_color="inverse",
+            )
+    st.write("")
+    with st.container():
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        with kpi1:
+            st.metric(
+                label="Completion %", value=comp_perc,
+            )
+        with kpi2:
+            st.metric(
+                label="20+ Yds", value=over_20,
+            )
+        with kpi3:
+            st.metric(
+                label="40+ Yds",
+                value=over_40,
+                # delta=f"{round(avg_points - comparison_points,1)} vs {comparison}",
+            )
+        with kpi4:
+            st.metric(
+                "Longest Pass",
+                value=long_pass,
+                # delta=f"{round(avg_points_against - comparison_points_against,1)} vs {comparison}",
+                # delta_color="inverse",
+            )
 
-    pass_cols = [
-        "week",
-        "qtr",
-        "passer",
-        "yardline_100",
-        "yrdln",
-        "pass_length",
-        "pass_location",
-        "pass_touchdown",
-        "yards_gained",
-        "yards_after_catch",
-        "receiver",
-    ]
-    pass_plays = raw[
-        (raw.passer_player_id == player1_id)
-        & (raw["pass"] == 1)
-        & (raw.sack == 0)
-        & (raw.interception == 0)
-        & (raw.incomplete_pass == 0)
-        & (pd.isnull(raw.pass_location) == False)
-    ][pass_cols]
-    pass_plays["air_yards"] = pass_plays.yards_gained - pass_plays.yards_after_catch
-
+    # ==== Weekly Passing Chart ================================================
     weekly_passing = pd.melt(
-        pass_plays.groupby("week")["yards_after_catch", "air_yards"]
-        .sum()
-        .reset_index(),
+        qb1_data.groupby("week")["yards_after_catch", "air_yards"].sum().reset_index(),
         id_vars="week",
         var_name="Yards Type",
         value_vars=["air_yards", "yards_after_catch"],
         value_name="Yards",
     )
-
-    # st.write(weekly_passing)
 
     fig = px.bar(  # Yards/game barchart
         data_frame=weekly_passing,
@@ -139,5 +211,4 @@ def app():
     fig.update_yaxes(showgrid=False,)
     st.plotly_chart(fig, config={"displayModeBar": False}, use_container_width=True)
 
-    st.write(pass_plays)
-
+    # st.write(qb1_data)
