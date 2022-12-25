@@ -7,7 +7,7 @@ import pandas as pd
 
 # ---- Custom imports ----
 from multipage import MultiPage
-from pages import home, team_stats, quarterbacks
+from app_pages import home, team_stats, quarterbacks
 
 
 # ---- Page Configuration ----
