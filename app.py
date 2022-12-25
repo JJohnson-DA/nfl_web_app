@@ -13,6 +13,18 @@ from pages import home, team_stats, quarterbacks
 # ---- Page Configuration ----
 st.set_page_config(layout="wide", page_title="Explore the NFL", page_icon="🏈")
 
+# Hide hamburger menu and streamlit logo
+# hide_menu_style = """
+#         <style>
+#         #MainMenu {visibility:hidden; }
+#         footer {visibility: hidden;}
+#         </style>
+#         """
+# st.markdown(hide_menu_style, unsafe_allow_html=True)
+
+# with open("style.css") as f:
+#     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
 # ---- Load Apps/Pages ----
 
 # Create an instance of the app
